@@ -2,7 +2,7 @@ import { LogEntity, LogSeverityLevel } from "../../entities/log.entity";
 import { LogRepository } from "../../repository/log.repository";
 
 interface CheckServiceUseCase{
-    execute(url:string):Promise<boolean>;
+    execute(url:string,origin:string):Promise<boolean>;
 }
 
 type SuccessCallback = (() => void) | undefined;
@@ -16,22 +16,36 @@ export class CheckService implements CheckServiceUseCase{
         private readonly errorCallBack:ErrorCallback,
     ){}
 
-    public async execute(url:string):Promise<boolean>{
+    public async execute(url:string,origin:string):Promise<boolean>{
         
         try {
             const req = await fetch(url);
             if (!req.ok) throw new Error(`Error on check service: ${url}`);
 
-            const log = new LogEntity(`Service ${url} working`, LogSeverityLevel.low);
+            const options = {
+                message:`Service ${url} working`,
+                level:LogSeverityLevel.low,
+                origin:origin
+            }
+
+            const log = new LogEntity(options);
             this.logRepository.saveLog(log);
             this.successCallback && this.successCallback();
             return true;
+
         } catch (error) {
-            const errorMessage = `${url} is not ok.${error}`;
-            const log = new LogEntity(errorMessage, LogSeverityLevel.high);
+
+            const errorMessage = `${url} is not ok.${error}\nOrigin: ${origin}`;
+            const options = {
+                message:errorMessage,
+                level:LogSeverityLevel.high,
+                origin:origin
+            }
+            const log = new LogEntity(options);
             this.logRepository.saveLog(log);
             this.errorCallBack && this.errorCallBack(errorMessage);
             return false;
+
         }
     
 
